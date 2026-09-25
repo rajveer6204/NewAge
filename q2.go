@@ -10,7 +10,7 @@ func main() {
 	fmt.Println("Original Slice:", students)
 
 	// Add
-	students = append(students, "Neha")
+	students = append(students, "Rajveer")
 	fmt.Println("After Add:", students)
 
 	// Remove by index (index 1)
@@ -23,9 +23,9 @@ func main() {
 
 	// Map operations
 	marks := map[string]int{
-		"Math":    80,
-		"Java":    85,
-		"DBMS":    75,
+		"Math": 80,
+		"Java": 85,
+		"DBMS": 75,
 	}
 
 	fmt.Println("\nOriginal Map:", marks)
