@@ -29,6 +29,7 @@ func main() {
 	fmt.Scan(&p1.Salary)
 
 	// Display Person 1
+
 	fmt.Println("\n--- Person 1 Details ---")
 	fmt.Println("Name:", p1.Name)
 	fmt.Println("Age:", p1.Age)
