@@ -25,12 +25,16 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.LocalDrink
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -50,111 +54,97 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.nearnestapp.data.MockData
+import com.example.nearnestapp.model.CartItem
+import com.example.nearnestapp.model.OrderRecord
 import com.example.nearnestapp.model.Product
+import com.example.nearnestapp.model.SellerStats
+import com.example.nearnestapp.model.Shop
+import com.example.nearnestapp.model.UserProfile
 import com.example.nearnestapp.navigation.NavRoutes
-import com.example.nearnestapp.ui.components.CampusGroupsSection
 import com.example.nearnestapp.ui.components.NearNestBottomBar
 import com.example.nearnestapp.ui.components.ProductImageDisplay
 import com.example.nearnestapp.ui.theme.NearNestPrimary
+import com.example.nearnestapp.ui.theme.NearNestRatingYellow
 import com.example.nearnestapp.ui.theme.NearNestTextPrimary
 import com.example.nearnestapp.ui.theme.NearNestTextSecondary
 
 @Composable
 fun HomeScreen(
-    userName: String = "Badal",
-    onProductClick: (String) -> Unit,
-    onNavigateToSearch: () -> Unit,
-    onAddToCart: (Product) -> Unit,
-    onNavigateTab: (String) -> Unit
+    userProfile: UserProfile = MockData.userProfile,
+    shops: List<Shop> = MockData.shops,
+    products: List<Product> = MockData.products,
+    cartItems: List<CartItem> = emptyList(),
+    sellerStats: SellerStats = MockData.sellerStats,
+    sellerOrders: List<OrderRecord> = MockData.sellerOrders,
+    onToggleUserMode: () -> Unit = {},
+    onToggleShopOpen: () -> Unit = {},
+    onShopClick: (String) -> Unit = {},
+    onProductClick: (String) -> Unit = {},
+    onNavigateToSearch: () -> Unit = {},
+    onAddToCart: (Product) -> Unit = {},
+    onViewCartClick: () -> Unit = {},
+    onNavigateTab: (String) -> Unit = {},
+    onUpdateOrderStatus: (String, String, String?) -> Unit = { _, _, _ -> },
+    onAddNewProduct: (String, Int, String, String, String) -> Unit = { _, _, _, _, _ -> },
+    onDeleteProduct: (String) -> Unit = {},
+    onToggleProductAvailability: (String) -> Unit = {}
 ) {
     var showMenuDialog by remember { mutableStateOf(false) }
-    var activeGroupDialogTitle by remember { mutableStateOf<String?>(null) }
+    val totalCartCount = cartItems.sumOf { it.quantity }
+
+    // If User is in Seller Mode, display Seller Dashboard!
+    if (userProfile.currentMode == "SELLER") {
+        val currentShop = shops.firstOrNull { it.id == userProfile.shopId } ?: shops.first()
+        SellerDashboardScreen(
+            userProfile = userProfile,
+            shop = currentShop,
+            sellerStats = sellerStats,
+            products = products,
+            orders = sellerOrders,
+            onToggleMode = onToggleUserMode,
+            onToggleShopOpen = onToggleShopOpen,
+            onUpdateOrderStatus = onUpdateOrderStatus,
+            onAddNewProduct = onAddNewProduct,
+            onDeleteProduct = onDeleteProduct,
+            onToggleProductAvailability = onToggleProductAvailability
+        )
+        return
+    }
 
     if (showMenuDialog) {
         AlertDialog(
             onDismissRequest = { showMenuDialog = false },
-            title = { Text("NearNest Campus Menu", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+            title = { Text("NearNest Navigation", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
             text = {
                 Column {
-                    Text("📍 Location: Dhanbad, Jharkhand", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = NearNestPrimary)
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text("🛒 Everyday Marketplace", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text("Order notebooks, calculators, chargers directly.", fontSize = 12.sp, color = NearNestTextSecondary)
+                    Text("📍 Location: ${userProfile.selectedLocation}", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = NearNestPrimary)
+                    Text("📍 Service Area: Registered shops within 5.5 km", fontSize = 12.sp, color = NearNestTextSecondary)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("👤 Active User: ${userProfile.name} (${userProfile.role})", fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("🤝 Borrow & Lend", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text("Borrow drafters, lab coats, chargers for exams.", fontSize = 12.sp, color = NearNestTextSecondary)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("🏃 Student Runners", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text("Earn delivery fees by carrying food/goods.", fontSize = 12.sp, color = NearNestTextSecondary)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("🚨 Urgent Broadcast", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text("Post urgent alerts right before viva/demos.", fontSize = 12.sp, color = NearNestTextSecondary)
+                    Text("🔄 Switch Mode to Seller / Shopkeeper Dashboard", fontSize = 13.sp, color = NearNestPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    showMenuDialog = false
-                    onNavigateToSearch()
-                }) {
-                    Text("Explore Marketplace", color = NearNestPrimary, fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = {
+                        showMenuDialog = false
+                        onToggleUserMode()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = NearNestPrimary)
+                ) {
+                    Text("Switch Mode", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showMenuDialog = false }) {
                     Text("Close", color = NearNestTextSecondary)
-                }
-            }
-        )
-    }
-
-    if (activeGroupDialogTitle != null) {
-        AlertDialog(
-            onDismissRequest = { activeGroupDialogTitle = null },
-            title = { Text(activeGroupDialogTitle ?: "", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
-            text = {
-                Column {
-                    when (activeGroupDialogTitle) {
-                        "group_marketplace" -> {
-                            Text("Catalog available for immediate order from campus sellers:", fontSize = 13.sp, color = NearNestTextSecondary)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("• Spiral Notebooks (₹60)\n• Pilot V5 Pens (₹40)\n• Casio Calculator (₹650)\n• Phone Fast Charger (₹150)", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        }
-                        "group_borrow" -> {
-                            Text("Active items available for free exam borrow:", fontSize = 13.sp, color = NearNestTextSecondary)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("• Engineering Mini Drafter (Hostel 1)\n• 65W Laptop Type-C Charger (Block B)\n• Lab Coat Size L (Block A)", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        }
-                        "group_runners" -> {
-                            Text("Student Runner Delivery Network:", fontSize = 13.sp, color = NearNestTextSecondary)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("• Active Runners: 14 students online\n• Avg Delivery Time: 8 mins within campus\n• Instant delivery fee credited to wallet.", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        }
-                        else -> {
-                            Text("Active Urgent Broadcast Alerts:", fontSize = 13.sp, color = NearNestTextSecondary)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            MockData.urgentAlerts.forEach { alert ->
-                                Text("🚨 ${alert.title}\n${alert.roomOrBlock} • ${alert.timestamp}", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                Spacer(modifier = Modifier.height(6.dp))
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    activeGroupDialogTitle = null
-                    onNavigateToSearch()
-                }) {
-                    Text("Open View", color = NearNestPrimary, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { activeGroupDialogTitle = null }) {
-                    Text("Dismiss", color = NearNestTextSecondary)
                 }
             }
         )
@@ -175,7 +165,7 @@ fun HomeScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header Bar (Top-left 3 lines Menu icon)
+            // Header Bar (Greeting + Cart Badge & Mode Switcher)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -187,14 +177,14 @@ fun HomeScreen(
                     IconButton(onClick = { showMenuDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Menu,
-                            contentDescription = "Menu (3 Lines)",
+                            contentDescription = "Menu",
                             tint = NearNestTextPrimary
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Column {
                         Text(
-                            text = "Hello, $userName 👋",
+                            text = "Hello, ${userProfile.name.split(" ").firstOrNull() ?: "Badal"} 👋",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = NearNestTextPrimary
@@ -207,17 +197,58 @@ fun HomeScreen(
                     }
                 }
 
-                IconButton(
-                    onClick = { showMenuDialog = true },
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(Color(0xFFF3F4F6))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Notifications",
-                        tint = NearNestTextPrimary
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Cart Badge Button
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color(0xFFF1F5F9))
+                            .clickable { onViewCartClick() }
+                            .padding(8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.ShoppingBag,
+                                contentDescription = "Cart",
+                                tint = NearNestPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            if (totalCartCount > 0) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFDC2626))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "$totalCartCount",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Mode Switcher Pill
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color(0xFFDCFCE7))
+                            .clickable { onToggleUserMode() }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "🏪 Seller Mode",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NearNestPrimary
+                        )
+                    }
                 }
             }
 
@@ -233,7 +264,7 @@ fun HomeScreen(
                     value = "",
                     onValueChange = {},
                     enabled = false,
-                    placeholder = { Text("Search nearby...", color = NearNestTextSecondary) },
+                    placeholder = { Text("Search nearby shops & products...", color = NearNestTextSecondary) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
@@ -322,6 +353,56 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Registered Local Shops Section (within 5-6 km)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Nearby Registered Shops",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NearNestTextPrimary
+                    )
+                    Text(
+                        text = "Local stores within 5.5 km of your location",
+                        fontSize = 12.sp,
+                        color = NearNestTextSecondary
+                    )
+                }
+
+                TextButton(onClick = onNavigateToSearch) {
+                    Text(
+                        text = "See All >",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NearNestPrimary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Local Shops Horizontal Carousel
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                items(shops) { shop ->
+                    ShopCardItem(
+                        shop = shop,
+                        onClick = { onShopClick(shop.id) }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
             // Category Horizontal Row
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
@@ -367,15 +448,6 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Campus Building Groups Section (Everyday Marketplace, Borrow & Lend, Student Runners, Urgent Broadcast)
-            CampusGroupsSection(
-                onGroupClick = { groupId ->
-                    activeGroupDialogTitle = groupId
-                }
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
             // Nearby Deals Header
             Row(
                 modifier = Modifier
@@ -409,7 +481,7 @@ fun HomeScreen(
                 contentPadding = PaddingValues(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                items(MockData.products) { product ->
+                items(products) { product ->
                     HomeProductCard(
                         product = product,
                         onProductClick = { onProductClick(product.id) },
@@ -419,6 +491,93 @@ fun HomeScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+fun ShopCardItem(
+    shop: Shop,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .width(200.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+            ) {
+                AsyncImage(
+                    model = shop.imageUrl,
+                    contentDescription = shop.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                Box(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (shop.isOpen) Color(0xFF166534) else Color(0xFF991B1B))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .align(Alignment.TopEnd)
+                ) {
+                    Text(
+                        text = if (shop.isOpen) "OPEN" else "CLOSED",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(
+                    text = shop.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = NearNestTextPrimary,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = NearNestPrimary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = "${shop.distanceKm} km • ${shop.category}",
+                        fontSize = 11.sp,
+                        color = NearNestTextSecondary
+                    )
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = NearNestRatingYellow,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = "${shop.rating} (${shop.reviewsCount})",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NearNestTextPrimary
+                    )
+                }
+            }
         }
     }
 }

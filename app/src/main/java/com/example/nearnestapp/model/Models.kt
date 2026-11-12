@@ -4,6 +4,7 @@ data class Shop(
     val id: String,
     val name: String,
     val category: String,
+    val description: String = "Quality products sourced locally in your neighbourhood.",
     val imageUrl: String,
     val distanceKm: Double,
     val rating: Double,
@@ -12,10 +13,20 @@ data class Shop(
     val openTime: String = "08:00 AM",
     val closeTime: String = "10:00 PM",
     val address: String,
+    val shopNumber: String = "Shop #4",
+    val streetLocality: String = "Main Market Road",
     val society: String = "Green Valley Society",
+    val city: String = "Dhanbad",
+    val state: String = "Jharkhand",
+    val pincode: String = "826001",
     val deliveryRadiusKm: Double = 6.0,
     val ownerName: String = "Ramesh Kumar",
     val ownerPhone: String = "+91 9876543210",
+    val altContactPhone: String = "",
+    val workingDays: String = "Monday to Sunday",
+    val minOrderAmount: Int = 100,
+    val isDeliveryAvailable: Boolean = true,
+    val verificationStatus: String = "Approved",
     val latitude: Double = 23.7957,
     val longitude: Double = 86.4304
 )
@@ -87,13 +98,15 @@ data class OrderRecord(
 data class UserProfile(
     val id: String = "user_1",
     val name: String = "Badal Prasad",
-    val email: String = "runner1@nearnest.local",
+    val email: String = "customer@nearnest.local",
     val phone: String = "+91 9876543210",
     val role: String = "CUSTOMER", // CUSTOMER or SELLER
     val currentMode: String = "BUYER", // BUYER or SELLER
+    val hasCompletedShopRegistration: Boolean = true,
     val shopId: String? = "shop_1",
     val walletBalance: Int = 250,
     val selectedLocation: String = "Dhanbad, Jharkhand",
+    val savedAddresses: List<String> = listOf("Flat 402, Green Valley Society, Dhanbad"),
     val latitude: Double = 23.7957,
     val longitude: Double = 86.4304
 )

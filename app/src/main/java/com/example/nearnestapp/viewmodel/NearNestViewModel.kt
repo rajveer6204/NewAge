@@ -2,6 +2,7 @@ package com.example.nearnestapp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.example.nearnestapp.data.MockData
+import com.example.nearnestapp.data.repository.FirebaseRepository
 import com.example.nearnestapp.model.CartItem
 import com.example.nearnestapp.model.OrderRecord
 import com.example.nearnestapp.model.Product
@@ -9,12 +10,15 @@ import com.example.nearnestapp.model.SellerStats
 import com.example.nearnestapp.model.SharePost
 import com.example.nearnestapp.model.Shop
 import com.example.nearnestapp.model.UserProfile
+import com.example.nearnestapp.util.LocationUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 class NearNestViewModel : ViewModel() {
+
+    private val repository = FirebaseRepository()
 
     private val _userProfile = MutableStateFlow(MockData.userProfile)
     val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
@@ -51,6 +55,12 @@ class NearNestViewModel : ViewModel() {
     private val _sharePosts = MutableStateFlow(MockData.sharePosts)
     val sharePosts: StateFlow<List<SharePost>> = _sharePosts.asStateFlow()
 
+    private val _snackbarMessage = MutableStateFlow<String?>(null)
+    val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
+
+    private val _cartConflictProduct = MutableStateFlow<Product?>(null)
+    val cartConflictProduct: StateFlow<Product?> = _cartConflictProduct.asStateFlow()
+
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
     }
@@ -59,8 +69,20 @@ class NearNestViewModel : ViewModel() {
         _selectedCategory.value = category
     }
 
-    fun updateLocation(location: String) {
-        _userProfile.update { it.copy(selectedLocation = location) }
+    fun updateLocation(locationName: String, lat: Double = 23.7957, lon: Double = 86.4304) {
+        _userProfile.update {
+            it.copy(selectedLocation = locationName, latitude = lat, longitude = lon)
+        }
+        recalculateNearbyShops(lat, lon)
+    }
+
+    private fun recalculateNearbyShops(userLat: Double, userLon: Double) {
+        _shops.update { currentList ->
+            currentList.map { shop ->
+                val dist = LocationUtils.calculateDistanceKm(userLat, userLon, shop.latitude, shop.longitude)
+                shop.copy(distanceKm = dist)
+            }.filter { it.distanceKm <= 6.0 }
+        }
     }
 
     fun updateUserProfile(name: String, email: String, role: String) {
@@ -68,6 +90,7 @@ class NearNestViewModel : ViewModel() {
         _userProfile.update {
             it.copy(name = name, email = email, role = role, currentMode = initialMode)
         }
+        repository.authenticateUser(name, email, role)
     }
 
     fun toggleUserMode() {
@@ -95,6 +118,7 @@ class NearNestViewModel : ViewModel() {
                 }
             }
         }
+        repository.updateOrderStatus(orderId, newStatus, reason)
     }
 
     fun addNewProduct(name: String, price: Int, category: String, unit: String, description: String) {
@@ -113,6 +137,7 @@ class NearNestViewModel : ViewModel() {
         )
         _products.update { listOf(newProd) + it }
         _sellerStats.update { it.copy(availableProducts = it.availableProducts + 1) }
+        repository.addProduct(newProd)
     }
 
     fun deleteProduct(productId: String) {
@@ -128,7 +153,51 @@ class NearNestViewModel : ViewModel() {
         }
     }
 
+    fun clearSnackbarMessage() {
+        _snackbarMessage.value = null
+    }
+
+    fun clearCartConflict() {
+        _cartConflictProduct.value = null
+    }
+
+    fun getProductQuantityInCart(productId: String): Int {
+        return _cartItems.value.find { it.product.id == productId }?.quantity ?: 0
+    }
+
+    fun getCartTotalCount(): Int {
+        return _cartItems.value.sumOf { it.quantity }
+    }
+
+    fun getCartTotalSum(): Int {
+        val subtotal = _cartItems.value.sumOf { it.product.price * it.quantity }
+        val deliveryFee = if (_cartItems.value.isNotEmpty()) 10 else 0
+        return subtotal + deliveryFee
+    }
+
     fun addToCart(product: Product) {
+        if (!product.isAvailable) {
+            _snackbarMessage.value = "Sorry, ${product.name} is currently out of stock!"
+            return
+        }
+
+        // Multi-Shop Cart Guard: Check if cart contains items from a different shop
+        val existingShopId = _cartItems.value.firstOrNull()?.product?.shopId
+        if (existingShopId != null && existingShopId != product.shopId && _cartItems.value.isNotEmpty()) {
+            _cartConflictProduct.value = product
+            return
+        }
+
+        performAddToCart(product)
+    }
+
+    fun confirmClearCartAndAdd(product: Product) {
+        _cartItems.value = emptyList()
+        _cartConflictProduct.value = null
+        performAddToCart(product)
+    }
+
+    private fun performAddToCart(product: Product) {
         _cartItems.update { current ->
             val existing = current.find { it.product.id == product.id }
             if (existing != null) {
@@ -140,6 +209,7 @@ class NearNestViewModel : ViewModel() {
                 current + CartItem(product, 1)
             }
         }
+        _snackbarMessage.value = "✓ ${product.name} added to cart successfully!"
     }
 
     fun updateQuantity(productId: String, delta: Int) {

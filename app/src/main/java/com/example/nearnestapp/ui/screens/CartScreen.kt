@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -96,7 +97,11 @@ fun CartScreen(
                     color = NearNestTextPrimary
                 )
 
-                IconButton(onClick = { }) {
+                IconButton(
+                    onClick = {
+                        cartItems.forEach { onUpdateQuantity(it.product.id, -it.quantity) }
+                    }
+                ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Clear Cart",
@@ -105,73 +110,119 @@ fun CartScreen(
                 }
             }
 
-            // Cart Items List
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                items(cartItems) { item ->
-                    CartItemCard(
-                        item = item,
-                        onUpdateQuantity = { delta -> onUpdateQuantity(item.product.id, delta) }
-                    )
-                }
-            }
-
-            // Price Breakdown Card & Checkout
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+            if (cartItems.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "Subtotal", fontSize = 14.sp, color = NearNestTextSecondary)
-                    Text(text = "₹$subtotal", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = NearNestTextPrimary)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFF1F5F9)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ShoppingBag,
+                                contentDescription = null,
+                                tint = NearNestTextSecondary,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Your cart is currently empty!",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NearNestTextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Explore nearby shops to add products.",
+                            fontSize = 13.sp,
+                            color = NearNestTextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Button(
+                            onClick = onBack,
+                            colors = ButtonDefaults.buttonColors(containerColor = NearNestPrimary)
+                        ) {
+                            Text("Browse Nearby Shops", fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+            } else {
+                // Cart Items List
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(text = "Delivery Fee", fontSize = 14.sp, color = NearNestTextSecondary)
-                    Text(text = "₹$deliveryFee", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = NearNestTextPrimary)
+                    items(cartItems) { item ->
+                        CartItemCard(
+                            item = item,
+                            onUpdateQuantity = { delta -> onUpdateQuantity(item.product.id, delta) }
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(color = Color(0xFFE5E7EB))
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = "Total", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = NearNestTextPrimary)
-                    Text(text = "₹$total", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = NearNestTextPrimary)
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Button(
-                    onClick = onCheckout,
+                // Price Breakdown Card & Checkout
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = NearNestPrimary)
+                        .padding(20.dp)
                 ) {
-                    Text(
-                        text = "Proceed to Checkout",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "Subtotal", fontSize = 14.sp, color = NearNestTextSecondary)
+                        Text(text = "₹$subtotal", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = NearNestTextPrimary)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "Delivery Fee", fontSize = 14.sp, color = NearNestTextSecondary)
+                        Text(text = "₹$deliveryFee", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = NearNestTextPrimary)
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = Color(0xFFE5E7EB))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "Total Payable", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = NearNestTextPrimary)
+                        Text(text = "₹$total", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = NearNestPrimary)
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Button(
+                        onClick = onCheckout,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = NearNestPrimary)
+                    ) {
+                        Text(
+                            text = "Proceed to Checkout",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
@@ -218,12 +269,12 @@ fun CartItemCard(
                     fontWeight = FontWeight.Bold,
                     color = NearNestTextPrimary
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "₹${item.product.price}",
+                    text = "₹${item.product.price} • ${item.product.unit}",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = NearNestTextPrimary
+                    color = NearNestPrimary
                 )
             }
 

@@ -8,6 +8,12 @@ val NearNestPrimaryLight = Color(0xFFDCFCE7)
 val NearNestSurfaceLight = Color(0xFFF0FDF4)
 val NearNestBackground = Color(0xFFFFFFFF)
 
+val DeepNavyPrimary = Color(0xFF173B57)
+val TealGreenSecondary = Color(0xFF16A085)
+val SoftWhiteBg = Color(0xFFF7F9FC)
+val WarmOrangeAccent = Color(0xFFF4A340)
+val DarkNavyText = Color(0xFF172B3A)
+
 val NearNestTextPrimary = Color(0xFF111827)
 val NearNestTextSecondary = Color(0xFF6B7280)
 val NearNestTextMuted = Color(0xFF9CA3AF)
