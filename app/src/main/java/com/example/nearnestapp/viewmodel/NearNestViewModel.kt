@@ -3,8 +3,11 @@ package com.example.nearnestapp.viewmodel
 import androidx.lifecycle.ViewModel
 import com.example.nearnestapp.data.MockData
 import com.example.nearnestapp.model.CartItem
+import com.example.nearnestapp.model.OrderRecord
 import com.example.nearnestapp.model.Product
+import com.example.nearnestapp.model.SellerStats
 import com.example.nearnestapp.model.SharePost
+import com.example.nearnestapp.model.Shop
 import com.example.nearnestapp.model.UserProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,8 +19,17 @@ class NearNestViewModel : ViewModel() {
     private val _userProfile = MutableStateFlow(MockData.userProfile)
     val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
 
+    private val _shops = MutableStateFlow(MockData.shops)
+    val shops: StateFlow<List<Shop>> = _shops.asStateFlow()
+
     private val _products = MutableStateFlow(MockData.products)
     val products: StateFlow<List<Product>> = _products.asStateFlow()
+
+    private val _sellerStats = MutableStateFlow(MockData.sellerStats)
+    val sellerStats: StateFlow<SellerStats> = _sellerStats.asStateFlow()
+
+    private val _sellerOrders = MutableStateFlow(MockData.sellerOrders)
+    val sellerOrders: StateFlow<List<OrderRecord>> = _sellerOrders.asStateFlow()
 
     private val _cartItems = MutableStateFlow<List<CartItem>>(
         listOf(
@@ -65,9 +77,30 @@ class NearNestViewModel : ViewModel() {
         }
     }
 
+    fun toggleShopOpen(shopId: String) {
+        _shops.update { current ->
+            current.map { shop ->
+                if (shop.id == shopId) shop.copy(isOpen = !shop.isOpen) else shop
+            }
+        }
+    }
+
+    fun updateOrderStatus(orderId: String, newStatus: String, reason: String? = null) {
+        _sellerOrders.update { current ->
+            current.map { order ->
+                if (order.orderId == orderId) {
+                    order.copy(status = newStatus, rejectionReason = reason)
+                } else {
+                    order
+                }
+            }
+        }
+    }
+
     fun addNewProduct(name: String, price: Int, category: String, unit: String, description: String) {
         val newProd = Product(
             id = "prod_${System.currentTimeMillis()}",
+            shopId = _userProfile.value.shopId ?: "shop_1",
             name = name,
             price = price,
             rating = 5.0,
@@ -79,6 +112,20 @@ class NearNestViewModel : ViewModel() {
             category = category
         )
         _products.update { listOf(newProd) + it }
+        _sellerStats.update { it.copy(availableProducts = it.availableProducts + 1) }
+    }
+
+    fun deleteProduct(productId: String) {
+        _products.update { current -> current.filterNot { it.id == productId } }
+        _sellerStats.update { it.copy(availableProducts = (it.availableProducts - 1).coerceAtLeast(0)) }
+    }
+
+    fun toggleProductAvailability(productId: String) {
+        _products.update { current ->
+            current.map { prod ->
+                if (prod.id == productId) prod.copy(isAvailable = !prod.isAvailable) else prod
+            }
+        }
     }
 
     fun addToCart(product: Product) {
